@@ -1,10 +1,13 @@
 local HttpService = game:GetService("HttpService")
 local RbxAnalytics = game:GetService("RbxAnalyticsService")
 
--- LINK RAW GITHUB ANDA
+-- CONFIGURATION
 local KEY_LIST_URL = "https://raw.githubusercontent.com/endsupriyadi25-debug/ride-a-petv1/refs/heads/main/keys.json"
 local MAIN_SCRIPT_URL = "https://raw.githubusercontent.com/endsupriyadi25-debug/ride-a-petv1/refs/heads/main/Main.lua"
 local SAVE_FILE = "MD_EggFarm_SavedKey.txt"
+
+-- MASUKKAN LINK TEMPAT PEMAIN AMBIL KEY (Misal: Link Discord / Pastebin Anda)
+local GET_KEY_LINK = "https://link-center.net/9347872/iYyFL35U077Q" 
 
 local HWID = RbxAnalytics:GetClientId()
 
@@ -62,8 +65,8 @@ ScreenGui.Name = "MD_KeySystemUI"
 pcall(function() ScreenGui.Parent = game:GetService("CoreGui") end)
 
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 300, 0, 150)
-Frame.Position = UDim2.new(0.5, -150, 0.4, -75)
+Frame.Size = UDim2.new(0, 300, 0, 180) -- Diperbesar sedikit untuk tombol tambahan
+Frame.Position = UDim2.new(0.5, -150, 0.4, -90)
 Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 Frame.Active = true
 Frame.Draggable = true
@@ -80,7 +83,7 @@ Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
 
 local InputBox = Instance.new("TextBox", Frame)
 InputBox.Size = UDim2.new(0.9, 0, 0, 35)
-InputBox.Position = UDim2.new(0.05, 0, 0.35, 0)
+InputBox.Position = UDim2.new(0.05, 0, 0.28, 0)
 InputBox.PlaceholderText = "Masukkan Key..."
 InputBox.Text = ""
 InputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
@@ -89,9 +92,10 @@ InputBox.Font = Enum.Font.SourceSans
 InputBox.TextSize = 13
 Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 5)
 
+-- TOMBOL LOGIN
 local SubmitBtn = Instance.new("TextButton", Frame)
-SubmitBtn.Size = UDim2.new(0.9, 0, 0, 35)
-SubmitBtn.Position = UDim2.new(0.05, 0, 0.65, 0)
+SubmitBtn.Size = UDim2.new(0.43, 0, 0, 35)
+SubmitBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
 SubmitBtn.Text = "LOGIN"
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
 SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -99,6 +103,18 @@ SubmitBtn.Font = Enum.Font.SourceSansBold
 SubmitBtn.TextSize = 14
 Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 5)
 
+-- TOMBOL GET KEY
+local GetKeyBtn = Instance.new("TextButton", Frame)
+GetKeyBtn.Size = UDim2.new(0.43, 0, 0, 35)
+GetKeyBtn.Position = UDim2.new(0.52, 0, 0.55, 0)
+GetKeyBtn.Text = "GET KEY"
+GetKeyBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 200)
+GetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetKeyBtn.Font = Enum.Font.SourceSansBold
+GetKeyBtn.TextSize = 14
+Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 5)
+
+-- LOGIKA KLIK BUTTON
 SubmitBtn.MouseButton1Click:Connect(function()
     local userKey = InputBox.Text
     SubmitBtn.Text = "Memeriksa..."
@@ -113,5 +129,16 @@ SubmitBtn.MouseButton1Click:Connect(function()
         SubmitBtn.Text = "LOGIN"
         InputBox.Text = ""
         InputBox.PlaceholderText = msg
+    end
+end)
+
+GetKeyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(GET_KEY_LINK)
+        GetKeyBtn.Text = "COPIED!"
+        task.wait(1.5)
+        GetKeyBtn.Text = "GET KEY"
+    else
+        GetKeyBtn.Text = "FAILED"
     end
 end)
