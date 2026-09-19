@@ -1,5 +1,5 @@
 -- ====================================================================
--- MASENSDEV RIDE A PET V2
+-- MASENSDEV RIDE A PET V2 (FIXED ESP FOR RenderedEggs)
 -- Modern Custom GUI (Red & Black Theme | Sidebar Layout)
 -- ====================================================================
 
@@ -28,6 +28,9 @@ local baseCFrame = nil
 local farmSpeed = 300
 local walkSpeedVal = 16
 local jumpPowerVal = 50
+
+-- ESP Tracking Data
+local activeESPList = {}
 
 -- Notification System
 local function sendNotification(title, text, duration)
@@ -92,7 +95,7 @@ local mdCorner = Instance.new("UICorner")
 mdCorner.CornerRadius = UDim.new(1, 0)
 mdCorner.Parent = toggleMDBtn
 
--- Main Frame (Background Hitam Transparansi 0.4)
+-- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 520, 0, 360)
 mainFrame.Position = UDim2.new(0.2, 0, 0.25, 0)
@@ -110,7 +113,7 @@ mainStroke.Color = Color3.fromRGB(200, 0, 0)
 mainStroke.Thickness = 1.5
 mainStroke.Parent = mainFrame
 
--- Top Title Bar (Merah Transparansi 0.4)
+-- Top Title Bar
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 40)
 titleBar.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
@@ -156,7 +159,7 @@ toggleMDBtn.MouseButton1Click:Connect(function()
 	mainFrame.Visible = not mainFrame.Visible
 end)
 
--- Sidebar Frame (Kiri)
+-- Sidebar Frame
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 130, 1, -45)
 sidebar.Position = UDim2.new(0, 5, 0, 42)
@@ -179,14 +182,14 @@ sidebarPadding.PaddingLeft = UDim.new(0, 6)
 sidebarPadding.PaddingRight = UDim.new(0, 6)
 sidebarPadding.Parent = sidebar
 
--- Content Container (Kanan)
+-- Content Container
 local contentArea = Instance.new("Frame")
 contentArea.Size = UDim2.new(1, -150, 1, -45)
 contentArea.Position = UDim2.new(0, 142, 0, 42)
 contentArea.BackgroundTransparency = 1
 contentArea.Parent = mainFrame
 
--- Tabs & Pages Management
+-- Tabs Management
 local tabButtons = {}
 local tabPages = {}
 
@@ -244,12 +247,10 @@ local function createTabPage(tabName)
 	return scrollPage
 end
 
--- Construct Pages
 local mainPage = createTabPage("Main")
 local miscPage = createTabPage("Misc")
 local settingPage = createTabPage("Setting")
 
--- Default Open Main Tab
 tabButtons["Main"].BackgroundColor3 = Color3.fromRGB(180, 0, 0)
 tabButtons["Main"].TextColor3 = Color3.fromRGB(255, 255, 255)
 tabPages["Main"].Visible = true
@@ -349,7 +350,6 @@ local function buildStepper(parent, titleText, defaultVal, minVal, maxVal, step,
 	Instance.new("UICorner", plus).CornerRadius = UDim.new(0, 4)
 	
 	local current = defaultVal
-	
 	local function updateVal(newVal)
 		current = math.clamp(newVal, minVal, maxVal)
 		lbl.Text = titleText .. ": " .. tostring(current)
@@ -364,13 +364,11 @@ end
 -- TAB 1: MAIN
 -- ====================================================================
 
--- 1. Min Value Egg
 buildInput(mainPage, "Min Value Egg (misal: 500, 10k, 1m)", function(text)
 	minValueFilter = parseValueText(text)
 	sendNotification("Min Value Egg", "Filter diset ke: " .. tostring(minValueFilter))
 end)
 
--- 2. Set Lokasi Markas
 buildButton(mainPage, "Set Lokasi Markas (Posisi Sekarang)", false, function(_, btn)
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -383,28 +381,37 @@ buildButton(mainPage, "Set Lokasi Markas (Posisi Sekarang)", false, function(_, 
 	end
 end)
 
--- 3. AUTO FARMING
 buildButton(mainPage, "AUTO FARMING: OFF", false, function(active, btn)
 	autoFarmActive = active
 	btn.Text = autoFarmActive and "AUTO FARMING: ON" or "AUTO FARMING: OFF"
 	btn.BackgroundColor3 = autoFarmActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(40, 40, 40)
 end)
 
--- 4. AUTO UPGRADE HATCH
 buildButton(mainPage, "AUTO UPGRADE HATCH: OFF", false, function(active, btn)
 	autoUpgradeHatchActive = active
 	btn.Text = autoUpgradeHatchActive and "AUTO UPGRADE HATCH: ON" or "AUTO UPGRADE HATCH: OFF"
 	btn.BackgroundColor3 = autoUpgradeHatchActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(40, 40, 40)
 end)
 
--- 5. ESP EGG
+-- Clear ESP helper
+local function clearAllESP()
+	for _, data in ipairs(activeESPList) do
+		if data.Gui and data.Gui.Parent then
+			data.Gui:Destroy()
+		end
+	end
+	activeESPList = {}
+end
+
 buildButton(mainPage, "ESP EGG: OFF", false, function(active, btn)
 	espActive = active
 	btn.Text = espActive and "ESP EGG: ON" or "ESP EGG: OFF"
 	btn.BackgroundColor3 = espActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(40, 40, 40)
+	if not espActive then
+		clearAllESP()
+	end
 end)
 
--- 6. Speed Menuju (Filter Limit Max 300)
 buildInput(mainPage, "Speed Menuju (Max: 300)", function(text, box)
 	local num = parseValueText(text)
 	if num > 300 then
@@ -454,12 +461,10 @@ end)
 -- TAB 3: SETTINGS
 -- ====================================================================
 
--- Anti AFK
 buildButton(settingPage, "Anti AFK: OFF", false, function(active, btn)
 	antiAfkActive = active
 	btn.Text = antiAfkActive and "Anti AFK: ON" or "Anti AFK: OFF"
 	btn.BackgroundColor3 = antiAfkActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(40, 40, 40)
-	
 	if antiAfkActive then
 		sendNotification("Anti AFK", "Fitur Anti AFK Aktif!")
 	end
@@ -472,13 +477,11 @@ player.Idled:Connect(function()
 	end
 end)
 
--- Rejoin Server
 buildButton(settingPage, "Rejoin Server", false, function(_, btn)
 	sendNotification("Rejoin", "Menghubungkan ulang ke server...", 3)
 	TeleportService:Teleport(game.PlaceId, player)
 end)
 
--- Hop Server (Cari Server Sepi)
 buildButton(settingPage, "Hop Server (Server Sepi)", false, function(_, btn)
 	sendNotification("Hop Server", "Mencari server sepi...", 3)
 	local placeId = game.PlaceId
@@ -498,12 +501,8 @@ buildButton(settingPage, "Hop Server (Server Sepi)", false, function(_, btn)
 end)
 
 -- ====================================================================
--- ESP SYSTEM (UNIVERSAL EGG DETECTOR)
+-- EGG HELPER & ESP SYSTEM (OPTIMIZED FOR RenderedEggs)
 -- ====================================================================
-
-local espFolder = Instance.new("Folder")
-espFolder.Name = "ESP_Container"
-espFolder.Parent = screenGui
 
 local function getEggFolder()
 	return workspace:FindFirstChild("RenderedEggs") 
@@ -551,8 +550,68 @@ local function getAllEggs()
 	return eggList
 end
 
+local function createEggESP(targetPart, eggName, val)
+	if targetPart:FindFirstChild("EggOverheadESP") then return end
+
+	local bgui = Instance.new("BillboardGui")
+	bgui.Name = "EggOverheadESP"
+	bgui.Adornee = targetPart
+	bgui.Size = UDim2.new(0, 180, 0, 55)
+	bgui.StudsOffset = Vector3.new(0, 3.5, 0)
+	bgui.AlwaysOnTop = true
+	bgui.MaxDistance = math.huge
+	bgui.Parent = targetPart
+
+	local frame = Instance.new("Frame", bgui)
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+	frame.BackgroundTransparency = 0.25
+
+	local fCorner = Instance.new("UICorner", frame)
+	fCorner.CornerRadius = UDim.new(0, 8)
+
+	local fStroke = Instance.new("UIStroke", frame)
+	fStroke.Color = Color3.fromRGB(255, 30, 30)
+	fStroke.Thickness = 1.5
+
+	local txt = Instance.new("TextLabel", frame)
+	txt.Name = "LabelInfo"
+	txt.Size = UDim2.new(1, -8, 1, -4)
+	txt.Position = UDim2.new(0, 4, 0, 2)
+	txt.BackgroundTransparency = 1
+	txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+	txt.TextStrokeTransparency = 0
+	txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	txt.Font = Enum.Font.SourceSansBold
+	txt.TextSize = 13
+	txt.Text = string.format("🥚 %s\n💰 Nilai: %d\n📏 Jarak: Calculating...", eggName, val)
+
+	table.insert(activeESPList, {
+		Part = targetPart,
+		Name = eggName,
+		Value = val,
+		Gui = bgui,
+		Label = txt
+	})
+end
+
+-- Thread Scanner ESP (Scan folder RenderedEggs setiap 1 detik)
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if espActive then
+			local allEggs = getAllEggs()
+			for _, eggData in ipairs(allEggs) do
+				if eggData.Value >= minValueFilter then
+					createEggESP(eggData.Part, eggData.Model.Name, eggData.Value)
+				end
+			end
+		end
+	end
+end)
+
+-- Thread RenderStepped (Update Teks Jarak)
 RunService.RenderStepped:Connect(function()
-	espFolder:ClearAllChildren()
 	if not espActive then return end
 	
 	local char = player.Character
@@ -560,31 +619,15 @@ RunService.RenderStepped:Connect(function()
 	if not hrp then return end
 	
 	local hrpPos = hrp.Position
-	local eggList = getAllEggs()
-	
-	for _, eggData in ipairs(eggList) do
-		local part = eggData.Part
-		if part then
-			local dist = (part.Position - hrpPos).Magnitude
-			local val = eggData.Value
-			
-			local bgui = Instance.new("BillboardGui")
-			bgui.Adornee = part
-			bgui.Size = UDim2.new(0, 200, 0, 50)
-			bgui.AlwaysOnTop = true
-			bgui.MaxDistance = math.huge
-			bgui.Parent = espFolder
-			
-			local txt = Instance.new("TextLabel")
-			txt.Size = UDim2.new(1, 0, 1, 0)
-			txt.BackgroundTransparency = 1
-			txt.TextColor3 = Color3.fromRGB(255, 50, 50)
-			txt.TextStrokeTransparency = 0
-			txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-			txt.Font = Enum.Font.SourceSansBold
-			txt.TextSize = 13
-			txt.Text = string.format("Nama: %s\nNilai: %d | Jarak: %dm", eggData.Model.Name, val, math.floor(dist))
-			txt.Parent = bgui
+
+	for i = #activeESPList, 1, -1 do
+		local data = activeESPList[i]
+		if data.Part and data.Part:IsDescendantOf(workspace) and data.Label and data.Label.Parent then
+			local dist = (data.Part.Position - hrpPos).Magnitude
+			data.Label.Text = string.format("🥚 %s\n💰 Nilai: %d\n📏 Jarak: %d Meter", data.Name, data.Value, math.floor(dist))
+		else
+			if data.Gui and data.Gui.Parent then data.Gui:Destroy() end
+			table.remove(activeESPList, i)
 		end
 	end
 end)
