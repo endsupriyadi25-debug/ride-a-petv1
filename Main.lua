@@ -1,5 +1,5 @@
 -- ====================================================================
--- MASENSDEV RIDE A PET V2 (FIXED ESP FOR RenderedEggs)
+-- MASENSDEV RIDE A PET V2 (CLEAN VALUE & FILTERED OVERHEAD)
 -- Modern Custom GUI (Red & Black Theme | Sidebar Layout)
 -- ====================================================================
 
@@ -43,17 +43,34 @@ local function sendNotification(title, text, duration)
 	end)
 end
 
--- Safe Text Parser (Mendukung parsing angka 'k', 'm', 'b')
+-- Safe Text Parser (Parsing 'k', 'm', 'b', 't')
 local function parseValueText(text)
 	if type(text) ~= "string" or text == "" then return 0 end
 	local cleanText = text:lower():gsub("%s+", "")
-	local numStr, unit = cleanText:match("([%d%.]+)([kmb]?)")
+	local numStr, unit = cleanText:match("([%d%.]+)([kmbt]?)")
 	local num = tonumber(numStr)
 	if not num then return 0 end
 	if unit == "k" then return num * 1000
 	elseif unit == "m" then return num * 1000000
-	elseif unit == "b" then return num * 1000000000 end
+	elseif unit == "b" then return num * 1000000000
+	elseif unit == "t" then return num * 1000000000000 end
 	return num
+end
+
+-- Formatter Angka Singkat (Mengubah 1000000000 menjadi 1B, dst)
+local function formatShortNumber(num)
+	if not num or num == 0 then return "0" end
+	if num >= 1e12 then
+		return string.format("%.1fT", num / 1e12):gsub("%.0T", "T")
+	elseif num >= 1e9 then
+		return string.format("%.1fB", num / 1e9):gsub("%.0B", "B")
+	elseif num >= 1e6 then
+		return string.format("%.1fM", num / 1e6):gsub("%.0M", "M")
+	elseif num >= 1e3 then
+		return string.format("%.1fK", num / 1e3):gsub("%.0K", "K")
+	else
+		return tostring(num)
+	end
 end
 
 -- Safeguard Remote Path
@@ -364,9 +381,20 @@ end
 -- TAB 1: MAIN
 -- ====================================================================
 
-buildInput(mainPage, "Min Value Egg (misal: 500, 10k, 1m)", function(text)
+-- Function Menghapus ESP Saat Di-Reset/Filter Diubah
+local function clearAllESP()
+	for _, data in ipairs(activeESPList) do
+		if data.Gui and data.Gui.Parent then
+			data.Gui:Destroy()
+		end
+	end
+	activeESPList = {}
+end
+
+buildInput(mainPage, "Min Value Egg (misal: 10k, 1m, 100b)", function(text)
 	minValueFilter = parseValueText(text)
-	sendNotification("Min Value Egg", "Filter diset ke: " .. tostring(minValueFilter))
+	clearAllESP() -- Bersihkan ESP agar overhead telur di bawah nilai filter hilang
+	sendNotification("Filter Min Value", "Menampilkan telur >= " .. formatShortNumber(minValueFilter))
 end)
 
 buildButton(mainPage, "Set Lokasi Markas (Posisi Sekarang)", false, function(_, btn)
@@ -392,16 +420,6 @@ buildButton(mainPage, "AUTO UPGRADE HATCH: OFF", false, function(active, btn)
 	btn.Text = autoUpgradeHatchActive and "AUTO UPGRADE HATCH: ON" or "AUTO UPGRADE HATCH: OFF"
 	btn.BackgroundColor3 = autoUpgradeHatchActive and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(40, 40, 40)
 end)
-
--- Clear ESP helper
-local function clearAllESP()
-	for _, data in ipairs(activeESPList) do
-		if data.Gui and data.Gui.Parent then
-			data.Gui:Destroy()
-		end
-	end
-	activeESPList = {}
-end
 
 buildButton(mainPage, "ESP EGG: OFF", false, function(active, btn)
 	espActive = active
@@ -501,7 +519,7 @@ buildButton(settingPage, "Hop Server (Server Sepi)", false, function(_, btn)
 end)
 
 -- ====================================================================
--- EGG HELPER & ESP SYSTEM (OPTIMIZED FOR RenderedEggs)
+-- EGG HELPER & OPTIMIZED OVERHEAD ESP SYSTEM
 -- ====================================================================
 
 local function getEggFolder()
@@ -584,7 +602,7 @@ local function createEggESP(targetPart, eggName, val)
 	txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	txt.Font = Enum.Font.SourceSansBold
 	txt.TextSize = 13
-	txt.Text = string.format("🥚 %s\n💰 Nilai: %d\n📏 Jarak: Calculating...", eggName, val)
+	txt.Text = string.format("🥚 %s\n💰 Nilai: %s\n📏 Jarak: Calculating...", eggName, formatShortNumber(val))
 
 	table.insert(activeESPList, {
 		Part = targetPart,
@@ -595,13 +613,14 @@ local function createEggESP(targetPart, eggName, val)
 	})
 end
 
--- Thread Scanner ESP (Scan folder RenderedEggs setiap 1 detik)
+-- Thread Scanner ESP (Hanya memproses telur yang lolos minValueFilter)
 task.spawn(function()
 	while true do
 		task.wait(1)
 		if espActive then
 			local allEggs = getAllEggs()
 			for _, eggData in ipairs(allEggs) do
+				-- FILTER HANYA UNTUK TELUR YANG NILAINYA LEBIH DARI/SAMA DENGAN MIN VALUE
 				if eggData.Value >= minValueFilter then
 					createEggESP(eggData.Part, eggData.Model.Name, eggData.Value)
 				end
@@ -624,7 +643,7 @@ RunService.RenderStepped:Connect(function()
 		local data = activeESPList[i]
 		if data.Part and data.Part:IsDescendantOf(workspace) and data.Label and data.Label.Parent then
 			local dist = (data.Part.Position - hrpPos).Magnitude
-			data.Label.Text = string.format("🥚 %s\n💰 Nilai: %d\n📏 Jarak: %d Meter", data.Name, data.Value, math.floor(dist))
+			data.Label.Text = string.format("🥚 %s\n💰 Nilai: %s\n📏 Jarak: %d Meter", data.Name, formatShortNumber(data.Value), math.floor(dist))
 		else
 			if data.Gui and data.Gui.Parent then data.Gui:Destroy() end
 			table.remove(activeESPList, i)
